@@ -25,6 +25,7 @@ import com.integralblue.httpresponsecache.compat.java.net.ExtendedResponseCache;
 import java.net.ResponseCache;
 import com.integralblue.httpresponsecache.compat.java.net.ResponseSource;
 
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
@@ -33,9 +34,10 @@ import java.util.Map;
 
 import javax.net.ssl.HttpsURLConnection;
 
+import libcore.io.IoUtils;
+
 import com.integralblue.httpresponsecache.compat.URLStreamHandlerFactoryImpl;
 import com.integralblue.httpresponsecache.compat.javax.net.ssl.DefaultHostnameVerifier;
-import com.integralblue.httpresponsecache.compat.libcore.io.IoUtils;
 import com.jakewharton.DiskLruCache;
 
 /***
@@ -145,10 +147,12 @@ import com.jakewharton.DiskLruCache;
 public final class HttpResponseCache extends ResponseCache
         implements Closeable, ExtendedResponseCache {
 
-    private final com.integralblue.httpresponsecache.compat.libcore.net.http.HttpResponseCache delegate;
+    private static boolean calledSetURLStreamHandlerFactory = false;
+
+    private final libcore.net.http.HttpResponseCache delegate;
 
     private HttpResponseCache(File directory, long maxSize) throws IOException {
-        this.delegate = new com.integralblue.httpresponsecache.compat.libcore.net.http.HttpResponseCache(directory, maxSize);
+        this.delegate = new libcore.net.http.HttpResponseCache(directory, maxSize);
     }
 
     /***
@@ -187,8 +191,13 @@ public final class HttpResponseCache extends ResponseCache
 
         HttpResponseCache result = new HttpResponseCache(directory, maxSize);
         ResponseCache.setDefault(result);
-        URL.setURLStreamHandlerFactory(new URLStreamHandlerFactoryImpl());
         HttpsURLConnection.setDefaultHostnameVerifier(new DefaultHostnameVerifier());
+        if(!calledSetURLStreamHandlerFactory) {
+            // The stream handler factory can only be set once, so don't set it again if it's already been set
+            // This can happen if the application calls install() then delete() then install() again
+            calledSetURLStreamHandlerFactory = true;
+            URL.setURLStreamHandlerFactory(new URLStreamHandlerFactoryImpl());
+        }
         return result;
     }
 
@@ -264,6 +273,11 @@ public final class HttpResponseCache extends ResponseCache
     /** @hide */
     public void trackConditionalCacheHit() {
         delegate.trackConditionalCacheHit();
+    }
+
+    /** @hide */
+    public void update(CacheResponse conditionalCacheHit, HttpURLConnection connection) {
+        delegate.update(conditionalCacheHit, connection);
     }
 
     /***

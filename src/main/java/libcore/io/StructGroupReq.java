@@ -14,32 +14,23 @@
  * limitations under the License.
  */
 
-package com.integralblue.httpresponsecache.compat.java.net;
+package libcore.io;
+
+import java.net.InetAddress;
 
 /**
- * Where the HTTP client should look for a response.
- *
- * @hide
+ * Corresponds to C's {@code struct group_req}.
  */
-public enum ResponseSource {
+public final class StructGroupReq {
+    public final int gr_interface;
+    public final InetAddress gr_group;
 
-    /**
-     * Return the response from the cache immediately.
-     */
-    CACHE,
+    public StructGroupReq(int gr_interface, InetAddress gr_group) {
+        this.gr_interface = gr_interface;
+        this.gr_group = gr_group;
+    }
 
-    /**
-     * Make a conditional request to the host, returning the cache response if
-     * the cache is valid and the network response otherwise.
-     */
-    CONDITIONAL_CACHE,
-
-    /**
-     * Return the response from the network.
-     */
-    NETWORK;
-
-    public boolean requiresConnection() {
-        return this == CONDITIONAL_CACHE || this == NETWORK;
+    @Override public String toString() {
+        return "StructGroupReq[gr_interface=" + gr_interface + ",gr_group=" + gr_group + "]";
     }
 }
